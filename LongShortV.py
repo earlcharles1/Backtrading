@@ -62,7 +62,7 @@ class BollingerBands(bt.Strategy):
                           order.executed.comm))
 
             self.bar_executed = len(self)
-
+# 
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
             self.log('Order Canceled/Margin/Rejected')
 
