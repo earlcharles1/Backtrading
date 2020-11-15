@@ -23,7 +23,7 @@ class BollingerBands(bt.Strategy):
     alias = ('BBands',)
 
     lines = ('mid', 'top', 'bot',)
-    params = (('period', 5), ('devfactor', 3.0), ('movav', MovAv.Simple),)
+    params = (('period', 20), ('devfactor', 1.5), ('movav', MovAv.Simple),)
 
     plotinfo = dict(subplot=False)
     plotlines = dict(
@@ -31,7 +31,10 @@ class BollingerBands(bt.Strategy):
         top=dict(_samecolor=True),
         bot=dict(_samecolor=True),
     )
-
+    def log(self, txt, dt=None):
+        ''' Logging function fot this strategy'''
+        dt = dt or self.datas[0].datetime.date(0)
+        print('%s, %s' % (dt.isoformat(), txt))
 
     def __init__(self):
         self.boll=bt.indicators.BollingerBands(period=self.params.period, devfactor=self.params.devfactor)
@@ -44,22 +47,34 @@ class BollingerBands(bt.Strategy):
 
     def next(self):
         if self.position:
-            return
-        if not self.position:
             if self.data.close > self.boll.lines.top:
-                self.order = self.sell()
+                self.log('SELL, %.2f' % self.data.close[0])
+                self.close()
+            else:
+                if self.data.close < self.boll.lines.bot:
+                    self.log('BUY, %.2f' % self.data.close[0])
+                    self.order = self.buy()
+        # if not self.position:
+        #     if self.data.close > self.boll.lines.top:
+        #         self.log('SELL CREATE, %.2f' % self.data.close[0])
+        #         self.order = self.sell()
         else:
-            if self.data.close < self.boll.lines.bot:
-                self.order = self.buy()
+            if self.data.close > self.boll.lines.top:
+                self.log('SELL, %.2f' % self.data.close[0])
+                self.close()
+            else:
+                if self.data.close < self.boll.lines.bot:
+                    self.log('BUY, %.2f' % self.data.close[0])
+                    self.order = self.buy()
 if __name__ == '__main__':
     cerebro = bt.Cerebro()
     cerebro.addstrategy(BollingerBands)
     modpath = os.path.dirname(os.path.abspath(sys.argv[0]))
-    datapath = os.path.join(modpath, 'RICK.csv')
+    datapath = os.path.join(modpath, 'TSLA.csv')
     data = bt.feeds.YahooFinanceCSVData(
         dataname=datapath,
         # Do not pass values before this date
-        fromdate=datetime.datetime(2019, 11, 13),
+        fromdate=datetime.datetime(2017, 11, 13),
         # Do not pass values before this date
         todate=datetime.datetime(2020, 11, 13),
         # Do not pass values after this date
