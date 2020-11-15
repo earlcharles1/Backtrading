@@ -23,7 +23,7 @@ class BollingerBands(bt.Strategy):
     alias = ('BBands',)
 
     lines = ('mid', 'top', 'bot',)
-    params = (('period', 20), ('devfactor', 3.0), ('movav', MovAv.Simple),
+    params = (('period', 20), ('devfactor', 1.85), ('movav', MovAv.Simple),
                 ('stake',1),)
 
     plotinfo = dict(subplot=False)
@@ -75,7 +75,8 @@ class BollingerBands(bt.Strategy):
                  (trade.pnl, trade.pnlcomm))
 
     def __init__(self):
-        self.boll=bt.indicators.BollingerBands(period=self.params.period, devfactor=self.params.devfactor)
+        self.boll=bt.indicators.BollingerBands(period=self.params.period, 
+            devfactor=self.params.devfactor)
         ma = self.params.movav(self.data, period=self.params.period)
         self.lines.mid = ma
         stddev = self.p.devfactor * StdDev(self.data, ma, period=self.params.period,
@@ -84,35 +85,29 @@ class BollingerBands(bt.Strategy):
         self.lines.bot = ma - stddev
         self.sizer.setsizing(self.params.stake)
     def next(self):
-        if self.position:
+        if self.position.size < 0:
             if self.data.close > self.boll.lines.top:
-                self.log('SELL, %.2f' % self.data.close[0])
+                # self.log('SHORT -100, %.2f' % self.data.close[0])
+                self.sell()
+                print(self.position.size)
+            elif self.data.close < self.boll.lines.top - self.boll.lines.top*(.25):
+                # self.log('COVER SHORT, %.2f' % self.data.close[0])
                 self.close()
-            else:
-                if self.data.close < self.boll.lines.bot:
-                    self.log('BUY, %.2f' % self.data.close[0])
-                    self.order = self.buy()
-        # if not self.position:
-        #     if self.data.close > self.boll.lines.top:
-        #         self.log('SELL CREATE, %.2f' % self.data.close[0])
-        #         self.order = self.sell()
+                print(self.position.size)
         else:
             if self.data.close > self.boll.lines.top:
-                self.log('SELL, %.2f' % self.data.close[0])
-                self.close()
-            else:
-                if self.data.close < self.boll.lines.bot:
-                    self.log('BUY, %.2f' % self.data.close[0])
-                    self.order = self.buy()
+                # self.log('SHORT, %.2f' % self.data.close[0])
+                self.sell()
+                print(self.position.size)
 if __name__ == '__main__':
     cerebro = bt.Cerebro()
     cerebro.addstrategy(BollingerBands)
     # modpath = os.path.dirname(os.path.abspath(sys.argv[0]))
     # datapath = os.path.join(modpath, 'ZM.csv')
     data = bt.feeds.YahooFinanceData(
-        dataname = 'BYND',
+        dataname = 'VXX',
         # Do not pass values before this date
-        fromdate = datetime.datetime(2019, 11, 13),
+        fromdate = datetime.datetime(2020, 3, 27),
         # Do not pass values before this date
         todate=datetime.datetime(2020, 11, 13),
         # Do not pass values after this date
@@ -121,7 +116,7 @@ if __name__ == '__main__':
     cerebro.broker.setcash(5000.0)
     cerebro.broker.setcommission(commission=0.0)
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
-    cerebro.addsizer(bt.sizers.FixedSize,stake=10)
+    cerebro.addsizer(bt.sizers.FixedSize,stake=100)
     cerebro.run()
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
     cerebro.plot()
