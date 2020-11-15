@@ -5,19 +5,23 @@ import datetime  # For datetime objects
 import os.path  # To manage paths
 import sys  # To find out the script name (in argv[0])
 
+
 # Import the backtrader platform
 import backtrader as bt
-from matplotlib import warnings
+
+
 # Create a Stratey
 class TestStrategy(bt.Strategy):
     params = (
         ('maperiod', 15),
+        ('printlog', True),
     )
 
-    def log(self, txt, dt=None):
-        ''' Logging function fot this strategy'''
-        dt = dt or self.datas[0].datetime.date(0)
-        print('%s, %s' % (dt.isoformat(), txt))
+    def log(self, txt, dt=None, doprint=False):
+        ''' Logging function for this strategy'''
+        if self.params.printlog or doprint:
+            dt = dt or self.datas[0].datetime.date(0)
+            print('%s, %s' % (dt.isoformat(), txt))
 
     def __init__(self):
         # Keep a reference to the "close" line in the data[0] dataseries
@@ -60,6 +64,7 @@ class TestStrategy(bt.Strategy):
         elif order.status in [order.Canceled, order.Margin, order.Rejected]:
             self.log('Order Canceled/Margin/Rejected')
 
+        # Write down: no pending order
         self.order = None
 
     def notify_trade(self, trade):
@@ -98,13 +103,19 @@ class TestStrategy(bt.Strategy):
                 # Keep track of the created order to avoid a 2nd order
                 self.order = self.sell()
 
+    def stop(self):
+        self.log('(MA Period %2d) Ending Value %.2f' %
+                 (self.params.maperiod, self.broker.getvalue()), doprint=True)
+
 
 if __name__ == '__main__':
     # Create a cerebro entity
     cerebro = bt.Cerebro()
 
     # Add a strategy
-    cerebro.addstrategy(TestStrategy)
+    strats = cerebro.optstrategy(
+        TestStrategy,
+        maperiod=range(1,201))
 
     # Datas are in a subfolder of the samples. Need to find where the script is
     # because it could have been called from anywhere
@@ -125,7 +136,7 @@ if __name__ == '__main__':
     cerebro.adddata(data)
 
     # Set our desired cash start
-    cerebro.broker.setcash(5000.0)
+    cerebro.broker.setcash(1000.0)
 
     # Add a FixedSize sizer according to the stake
     cerebro.addsizer(bt.sizers.FixedSize, stake=10)
@@ -133,12 +144,5 @@ if __name__ == '__main__':
     # Set the commission
     cerebro.broker.setcommission(commission=0.0)
 
-    # Print out the starting conditions
-    print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
-
     # Run over everything
-    cerebro.run()
-    cerebro.plot()
-
-    # Print out the final result
-    print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
+    cerebro.run(maxcpus=1)
