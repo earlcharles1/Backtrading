@@ -89,17 +89,18 @@ class BollingerBands(bt.Strategy):
         if self.position.size < 0:
             if self.data.close > self.boll.lines.top:
                 # self.log('SHORT -100, %.2f' % self.data.close[0])
-                self.sell()
-                print(self.position.size)
+                # self.sell()
+                print("We could short more,but we won't!")
             elif self.data.close < self.boll.lines.top - self.boll.lines.top*(.20):
                 # self.log('COVER SHORT, %.2f' % self.data.close[0])
                 self.close(size=abs(posSize))
-                print(self.position.size)
+                print(f" PositionSize: {posSize}")
         else:
             if self.data.close > self.boll.lines.top:
                 # self.log('SHORT, %.2f' % self.data.close[0])
                 self.sell()
-                print(self.position.size)
+                print(f" PositionSize: {posSize}")
+        print(f" PositionSize: {posSize}")
 if __name__ == '__main__':
     cerebro = bt.Cerebro()
     cerebro.addstrategy(BollingerBands)

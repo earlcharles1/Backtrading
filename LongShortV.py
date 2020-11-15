@@ -45,6 +45,7 @@ class BollingerBands(bt.Strategy):
         # Attention: broker could reject order if not enough cash
         if order.status in [order.Completed]:
             if order.isbuy():
+                
                 self.log(
                     'BUY EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
                     (order.executed.price,
@@ -54,6 +55,7 @@ class BollingerBands(bt.Strategy):
                 self.buyprice = order.executed.price
                 self.buycomm = order.executed.comm
             else:  # Sell
+                pass
                 self.log('SELL EXECUTED, Price: %.2f, Cost: %.2f, Comm %.2f' %
                          (order.executed.price,
                           order.executed.value,
@@ -86,27 +88,37 @@ class BollingerBands(bt.Strategy):
         self.sizer.setsizing(self.params.stake)
     def next(self):
         posSize = self.position.size
-        if self.position.size < 0:
-            if self.data.close > self.boll.lines.top:
-                # self.log('SHORT -100, %.2f' % self.data.close[0])
-                self.sell()
-                print(self.position.size)
-            elif self.data.close < self.boll.lines.top - self.boll.lines.top*(.20):
-                # self.log('COVER SHORT, %.2f' % self.data.close[0])
-                self.close(size=abs(posSize))
-                print(self.position.size)
-        else:
-            if self.data.close > self.boll.lines.top:
-                # self.log('SHORT, %.2f' % self.data.close[0])
-                self.sell()
-                print(self.position.size)
+        if posSize <= -1:
+            if self.data.close > self.boll.lines.top :
+                print("We can go more short, but won't!")
+            elif self.data.close < self.boll.lines.top - self.boll.lines.top * (.045):
+                print("Buy to close,")
+                self.close(size=abs((posSize)))
+                
+        elif posSize >= 1:
+            if self.data.close > self.boll.lines.top :
+                print("Sell to close,")
+                self.close(size=(posSize))
+                
+        elif posSize == 0:
+            if self.data.close < self.boll.lines.bot:
+                print(f"Buy to open,")
+                self.buy(size=100)
+                
+            elif self.data.close > self.boll.lines.top:
+                print(f"Sell to open,")
+                self.sell(size=100)
+            # elif self.data.close < self.boll.lines.top - self.boll.lines.top * (.045):
+            #     print("Buy to open")
+            #     self.buy()
+        print(f" PositionSize: {posSize}")            
 if __name__ == '__main__':
     cerebro = bt.Cerebro()
     cerebro.addstrategy(BollingerBands)
     # modpath = os.path.dirname(os.path.abspath(sys.argv[0]))
     # datapath = os.path.join(modpath, 'ZM.csv')
     data = bt.feeds.YahooFinanceData(
-        dataname = 'VXX',
+        dataname = 'SVXY',
         # Do not pass values before this date
         fromdate = datetime.datetime(2020, 3, 27),
         # Do not pass values before this date
@@ -117,7 +129,7 @@ if __name__ == '__main__':
     cerebro.broker.setcash(5000.0)
     cerebro.broker.setcommission(commission=0.0)
     print('Starting Portfolio Value: %.2f' % cerebro.broker.getvalue())
-    cerebro.addsizer(bt.sizers.FixedSize,stake=100)
+    cerebro.addsizer(bt.sizers.FixedSize,stake=50)
     cerebro.run()
     print('Final Portfolio Value: %.2f' % cerebro.broker.getvalue())
     cerebro.plot()
